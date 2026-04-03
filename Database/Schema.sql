@@ -34,3 +34,7 @@ create table trip_places (
   place_id bigint references places(id),
   order_number integer
 );
+
+ALTER TABLE places
+ADD COLUMN visit_duration_minutes INTEGER,
+ADD COLUMN opening_hours TEXT;
