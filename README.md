@@ -16,3 +16,7 @@ This is a web application to plan one-day trips around Ratmalana.
 ## Progress
 
 - Database created
+- Setup React app with Vite
+- Integrated with existing project
+- Added database schema and seed files
+- Configured Git and GitHub
