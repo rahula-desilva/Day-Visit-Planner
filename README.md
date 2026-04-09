@@ -20,3 +20,7 @@ This is a web application to plan one-day trips around Ratmalana.
 - Integrated with existing project
 - Added database schema and seed files
 - Configured Git and GitHub
+- Installed Tailwind CSS
+- Built responsive UI for places
+- Displaying places from database
+- Started "Add to Plan" feature
