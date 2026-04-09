@@ -44,7 +44,8 @@ function App() {
   async function fetchPlaces() {
     const { data, error } = await supabase
       .from("places")
-      .select("*");
+      .select("*")
+      .order("id", { ascending: true });
 
     if (error) {
       console.log("Error:", error);
@@ -85,9 +86,22 @@ function App() {
         {places.map((place) => (
           <div
             key={place.id}
-            className="flex flex-col bg-white rounded-2xl shadow-md p-5 hover:shadow-lg transition"
+            className="flex flex-col bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100"
           >
-            <h2 className="text-xl font-semibold text-gray-800">
+            {place.image_url ? (
+              <img 
+                src={place.image_url} 
+                alt={place.name} 
+                className="w-full h-48 object-cover border-b border-gray-100"
+              />
+            ) : (
+              <div className="w-full h-48 bg-gray-100 border-b border-gray-200 flex items-center justify-center text-gray-400">
+                <span className="text-sm">No Image Available</span>
+              </div>
+            )}
+            
+            <div className="p-5 flex flex-col flex-grow">
+              <h2 className="text-xl font-bold text-gray-800">
               {place.name}
             </h2>
 
@@ -95,12 +109,13 @@ function App() {
               {place.description}
             </p>
 
-            <button 
-              onClick={() => addToPlan(place)}
-              className="mt-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-            >
-              Add to Plan
-            </button>
+              <button 
+                onClick={() => addToPlan(place)}
+                className="mt-auto w-full bg-green-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+              >
+                Add to Plan
+              </button>
+            </div>
           </div>
         ))}
         </div>
