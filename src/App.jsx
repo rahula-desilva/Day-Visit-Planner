@@ -1,5 +1,18 @@
 import { supabase } from "./supabase";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+
+// Fix for default Leaflet marker icons not showing up in React
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;
@@ -31,6 +44,25 @@ function App() {
   const [plannedTrip, setPlannedTrip] = useState([]);
   const [tripSummary, setTripSummary] = useState(null);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [includeLunch, setIncludeLunch] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [customLocation, setCustomLocation] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [routeGeometry, setRouteGeometry] = useState(null);
+
+  // Helper to zoom map to fit all markers
+  function MapRefresher({ points }) {
+    const map = useMap();
+    useEffect(() => {
+      if (points && points.length > 0) {
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }, [points, map]);
+    return null;
+  }
 
   const categories = ["All", "Nature", "Recreation", "Religious", "Heritage"];
 
@@ -46,103 +78,180 @@ function App() {
 
   async function generatePlan() {
     if (selectedPlaces.length === 0) return;
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
-      return;
-    }
+    setIsGenerating(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        setStatus("Calculating Fast Route...");
-        const userLat = position.coords.latitude;
-        const userLon = position.coords.longitude;
-        // 👉 ADD THIS TO DEBUG:
-        console.log(`My Browser thinks I am exactly here: https://www.google.com/maps?q=${userLat},${userLon}`);
+    try {
+      let startLat, startLon;
 
-        let availablePlaces = [...selectedPlaces];
-        let sortedRoute = [];
-        let currentLocation = { lat: userLat, lon: userLon };
+      if (customLocation.trim()) {
+        setStatus("Geocoding location...");
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customLocation)}&limit=1`);
+        const geoData = await geoRes.json();
 
-        while (availablePlaces.length > 0) {
-          let closestIndex = 0;
-          let minDistance = Infinity;
-          for (let i = 0; i < availablePlaces.length; i++) {
-            const p = availablePlaces[i];
-            const dist = getDistanceFromLatLonInKm(currentLocation.lat, currentLocation.lon, p.latitude, p.longitude);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestIndex = i;
-            }
-          }
-          const nextStop = availablePlaces.splice(closestIndex, 1)[0];
-          sortedRoute.push(nextStop);
-          currentLocation = { lat: nextStop.latitude, lon: nextStop.longitude };
+        if (geoData.length > 0) {
+          startLat = parseFloat(geoData[0].lat);
+          startLon = parseFloat(geoData[0].lon);
+        } else {
+          alert("Could not find that location. Please try a different city or place name.");
+          setIsGenerating(false);
+          setStatus("✅ Connected Successfully");
+          return;
+        }
+      } else {
+        if (!navigator.geolocation) {
+          alert("Geolocation is not supported by your browser");
+          setIsGenerating(false);
+          return;
         }
 
-        let coordinatesString = `${userLon},${userLat}`;
-        sortedRoute.forEach(place => {
-          coordinatesString += `;${place.longitude},${place.latitude}`;
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        startLat = position.coords.latitude;
+        startLon = position.coords.longitude;
+      }
+
+      setStatus("Calculating Fast Route...");
+      const userLat = startLat;
+      const userLon = startLon;
+
+      console.log(`Starting Point: https://www.google.com/maps?q=${userLat},${userLon}`);
+
+      let availablePlaces = [...selectedPlaces];
+      let sortedRoute = [];
+      let currentLocation = { lat: userLat, lon: userLon };
+
+      while (availablePlaces.length > 0) {
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        for (let i = 0; i < availablePlaces.length; i++) {
+          const p = availablePlaces[i];
+          const dist = getDistanceFromLatLonInKm(currentLocation.lat, currentLocation.lon, p.latitude, p.longitude);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestIndex = i;
+          }
+        }
+        const nextStop = availablePlaces.splice(closestIndex, 1)[0];
+        sortedRoute.push(nextStop);
+        currentLocation = { lat: nextStop.latitude, lon: nextStop.longitude };
+      }
+
+      let coordinatesString = `${userLon},${userLat}`;
+      sortedRoute.forEach(place => {
+        coordinatesString += `;${place.longitude},${place.latitude}`;
+      });
+
+      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinatesString}?overview=full&geometries=geojson`);
+      const data = await response.json();
+
+      if (data.code !== "Ok") {
+        alert("Could not calculate actual roads. Make sure all spots have valid coordinates!");
+        setStatus("✅ Connected Successfully");
+        setIsGenerating(false);
+        return;
+      }
+
+      const totalDistanceKm = data.routes[0].distance / 1000;
+      const totalDrivingHours = data.routes[0].duration / 3600;
+
+      // Parse start time "HH:MM" to float
+      const [h, m] = startTime.split(":").map(Number);
+      let currentTime = h + m / 60;
+      const initialStartTime = currentTime;
+
+      const legs = data.routes[0].legs;
+      const finalItinerary = [];
+      let lunchAdded = false;
+
+      for (let i = 0; i < sortedRoute.length; i++) {
+        const place = sortedRoute[i];
+        const driveTimeHours = legs[i].duration / 3600;
+        const driveDistanceKm = legs[i].distance / 1000;
+
+        // Scenario A: Lunch happens BEFORE the drive (if it's already past 12:00 PM)
+        if (includeLunch && !lunchAdded && currentTime >= 12.0 && currentTime < 14.5) {
+          finalItinerary.push({
+            id: "lunch-break",
+            name: "🍱 Lunch Break",
+            description: "Time to refuel after your last visit!",
+            startTime: currentTime,
+            endTime: currentTime + 1,
+            isLunch: true,
+            distanceFromPrevious: 0,
+            latitude: currentLocation.lat + 0.0001,
+            longitude: currentLocation.lon + 0.0001
+          });
+          currentTime += 1;
+          lunchAdded = true;
+        }
+
+        let arrivalTime = currentTime + driveTimeHours;
+
+        // Scenario B: Lunch happens AFTER the drive (if arrival is past 12:30 PM)
+        if (includeLunch && !lunchAdded && arrivalTime >= 12.5 && arrivalTime < 15.0) {
+          finalItinerary.push({
+            id: "lunch-break",
+            name: "🍱 Lunch Break",
+            description: "Time to refuel and rest!",
+            startTime: arrivalTime,
+            endTime: arrivalTime + 1,
+            isLunch: true,
+            distanceFromPrevious: driveDistanceKm,
+            latitude: place.latitude - 0.0001,
+            longitude: place.longitude - 0.0001
+          });
+          currentTime = arrivalTime + 1;
+          arrivalTime = currentTime;
+          lunchAdded = true;
+        }
+
+        const visitDurationHours = (place.visit_duration_minutes || 60) / 60;
+        const departureTime = arrivalTime + visitDurationHours;
+
+        const distanceForThisStop = (lunchAdded && finalItinerary.length > 0 && finalItinerary[finalItinerary.length - 1].id === "lunch-break" && finalItinerary[finalItinerary.length - 1].distanceFromPrevious > 0)
+          ? 0
+          : driveDistanceKm;
+
+        finalItinerary.push({
+          ...place,
+          startTime: arrivalTime,
+          endTime: departureTime,
+          distanceFromPrevious: distanceForThisStop
         });
 
-        try {
-          const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinatesString}?overview=false`);
-          const data = await response.json();
-
-          if (data.code !== "Ok") {
-            alert("Could not calculate actual roads. Make sure all spots have valid coordinates!");
-            setStatus("✅ Connected Successfully");
-            return;
-          }
-
-          const totalDistanceKm = data.routes[0].distance / 1000;
-          const totalDrivingHours = data.routes[0].duration / 3600;
-
-          let currentTime = 9;
-          const legs = data.routes[0].legs;
-
-          const finalItinerary = sortedRoute.map((place, index) => {
-            const driveTimeHours = legs[index].duration / 3600;
-            const arrivalTime = currentTime + driveTimeHours;
-            const visitDurationHours = (place.visit_duration_minutes || 60) / 60;
-            const departureTime = arrivalTime + visitDurationHours;
-
-            currentTime = departureTime;
-
-            return {
-              ...place,
-              startTime: arrivalTime,
-              endTime: departureTime,
-              distanceFromPrevious: legs[index].distance / 1000
-            };
-          });
-
-          const totalTripHours = currentTime - 9;
-
-          if (totalDistanceKm > 30 || totalTripHours > 8) {
-            alert(`Whoops! Too long! This trip is ${totalDistanceKm.toFixed(1)} km and takes a total of ${totalTripHours.toFixed(1)} hours. Please remove a place from your plan.`);
-            setStatus("✅ Connected Successfully");
-            return;
-          }
-
-          setTripSummary({
-            distance: totalDistanceKm.toFixed(1),
-            drivingHours: totalDrivingHours.toFixed(1),
-            totalHours: totalTripHours.toFixed(1)
-          });
-          setPlannedTrip(finalItinerary);
-          setStatus("✅ Connected Successfully");
-
-        } catch (error) {
-          console.error("API Error: ", error);
-          alert("Failed to connect to the fast map API.");
-          setStatus("✅ Connected Successfully");
-        }
-      },
-      (error) => {
-        console.error(error);
-        alert("We need your location to calculate actual driving time!");
+        currentTime = departureTime;
+        currentLocation = { lat: place.latitude, lon: place.longitude };
       }
-    );
+
+      const totalTripHours = currentTime - initialStartTime;
+
+      if (totalDistanceKm > 50 || totalTripHours > 12) {
+        alert(`Whoops! Too long! This trip is ${totalDistanceKm.toFixed(1)} km and takes a total of ${totalTripHours.toFixed(1)} hours. Please remove a place from your plan.`);
+        setStatus("✅ Connected Successfully");
+        setIsGenerating(false);
+        return;
+      }
+
+      setTripSummary({
+        distance: totalDistanceKm.toFixed(1),
+        drivingHours: totalDrivingHours.toFixed(1),
+        totalHours: totalTripHours.toFixed(1)
+      });
+      setPlannedTrip(finalItinerary);
+      if (data.routes[0].geometry) {
+        setRouteGeometry(data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]));
+      }
+      setStatus("✅ Connected Successfully");
+      setIsGenerating(false);
+      setShowMap(false); // Map stays hidden until the button is clicked
+
+    } catch (error) {
+      console.error("Error generating plan:", error);
+      alert("Something went wrong while generating the plan. Please check your internet and try again.");
+      setStatus("✅ Connected Successfully");
+      setIsGenerating(false);
+    }
   }
 
   useEffect(() => {
@@ -192,53 +301,245 @@ function App() {
               {selectedPlaces.map((place) => (
                 <span key={`plan-${place.id}`} className="bg-blue-600 text-white px-3 py-1 rounded-full flex items-center gap-2">
                   {place.name}
-                  <button onClick={() => removeFromPlan(place.id)} className="text-sm font-bold text-red-200 hover:text-white">✕</button>
+                  <button
+                    onClick={() => removeFromPlan(place.id)}
+                    className="text-sm font-bold text-red-100 hover:text-white active:scale-75 transition-transform"
+                  >
+                    ✕
+                  </button>
                 </span>
               ))}
             </div>
-            <button
-              onClick={generatePlan}
-              className="bg-indigo-600 text-white font-bold px-6 py-3 rounded-lg w-full md:w-auto hover:bg-indigo-700 transition shadow-md"
-            >
-              Generate Plan 🚀
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="space-y-4 bg-white/50 p-4 rounded-xl border border-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Trip Settings</h3>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-600">Starting Location</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Current Location (GPS)"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={customLocation}
+                      onChange={(e) => {
+                        setCustomLocation(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                    />
+
+                    {showSuggestions && customLocation.trim().length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        {["Colombo", "Kandy", "Galle", "Negombo", "Jaffna", "Anuradhapura", "Trincomalee", "Matara", "Kurunegala", "Ratnapura", "Gampaha", "Kalutara", "Bentota", "Sigiriya", "Ella", "Nuwara Eliya", "Dehiwala"]
+                          .filter(city => city.toLowerCase().includes(customLocation.toLowerCase()))
+                          .map(city => (
+                            <div
+                              key={city}
+                              className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-gray-700 transition-colors border-b last:border-0 border-gray-50"
+                              onClick={() => {
+                                setCustomLocation(city);
+                                setShowSuggestions(false);
+                              }}
+                            >
+                              {city}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    <span className="absolute left-3 top-2.5 text-gray-400">📍</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-600">Start Time</label>
+                  <div className="relative">
+                    <select
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    >
+                      {Array.from({ length: 4 * 12 }).map((_, i) => {
+                        const h = Math.floor(i / 4) + 6; // Start from 6 AM
+                        const m = (i % 4) * 15;
+                        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                        const displayH = h > 12 ? h - 12 : h;
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        return (
+                          <option key={timeStr} value={timeStr}>
+                            {displayH}:{m.toString().padStart(2, '0')} {ampm}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <span className="absolute left-3 top-2.5 text-gray-400">⏰</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-white/50 p-4 rounded-xl border border-white flex flex-col justify-center">
+                <label className="flex items-center gap-3 cursor-pointer group p-2 rounded-lg hover:bg-white/80 transition-all">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={includeLunch}
+                      onChange={(e) => setIncludeLunch(e.target.checked)}
+                    />
+                    <div className={`w-12 h-6 rounded-full transition-colors ${includeLunch ? 'bg-orange-500' : 'bg-gray-300'}`}></div>
+                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${includeLunch ? 'translate-x-6' : ''}`}></div>
+                  </div>
+                  <span className="font-semibold text-gray-700 group-hover:text-orange-600 transition-colors">
+                    Include Lunch Break (1 hr) 🍱
+                  </span>
+                </label>
+
+                <p className="text-xs text-gray-500 italic">
+                  Tip: If "Starting Location" is empty, we'll use your current GPS location.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
+              <button
+                onClick={generatePlan}
+                disabled={isGenerating}
+                className={`
+                  relative font-bold px-8 py-3 rounded-xl transition-all shadow-lg min-w-[200px]
+                  ${isGenerating
+                    ? "bg-indigo-400 cursor-wait scale-95"
+                    : "bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.95] active:shadow-inner"}
+                  text-white flex items-center justify-center gap-2
+                `}
+              >
+                {isGenerating ? (
+                  <>
+                    <span className="animate-spin text-xl">🌀</span>
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Plan 🚀"
+                )}
+              </button>
+            </div>
           </div>
         )}
 
         {plannedTrip.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-6">Your Optimized Itinerary</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-extrabold text-gray-900">Your Optimized Itinerary</h2>
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+              >
+                {showMap ? "Hide Map 🗺️" : "Show Map 🗺️"}
+              </button>
+            </div>
 
-            {tripSummary && (
-              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm">
-                <p className="text-blue-800 font-semibold text-lg flex flex-wrap items-center gap-y-2">
-                  <span className="mr-6">🚗 Drive Distance: <span className="font-bold text-black">{tripSummary.distance} km</span></span>
-                  <span className="mr-6">⏱️ Drive Time: <span className="font-bold text-black">{tripSummary.drivingHours} hrs</span></span>
-                  <span>🏁 Total Trip Time: <span className="font-bold text-black">{tripSummary.totalHours} hrs</span></span>
-                </p>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8">
-              <div className="relative border-l-4 border-indigo-500 pl-8 space-y-10 ml-4">
-                {plannedTrip.map((stop, index) => (
-                  <div key={`itinerary-${stop.id}`} className="relative">
-                    <div className="absolute -left-[45px] top-1 bg-indigo-500 text-white font-bold w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md">
-                      {index + 1}
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900">{stop.name}</h3>
-                    <p className="text-indigo-600 font-semibold mb-2 text-lg">
-                      {formatTime(stop.startTime)} - {formatTime(stop.endTime)}
+            <div className={`flex flex-col ${showMap ? 'md:flex-row' : ''} gap-8`}>
+              {/* Itinerary Column */}
+              <div className={`${showMap ? 'md:w-1/2' : 'w-full'} space-y-6`}>
+                {tripSummary && (
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg shadow-sm">
+                    <p className="text-blue-800 font-semibold text-lg flex flex-wrap items-center gap-y-2">
+                      <span className="mr-6">🚗 Drive Distance: <span className="font-bold text-black">{tripSummary.distance} km</span></span>
+                      <span className="mr-6">⏱️ Drive Time: <span className="font-bold text-black">{tripSummary.drivingHours} hrs</span></span>
+                      <span>🏁 Total Trip Time: <span className="font-bold text-black">{tripSummary.totalHours} hrs</span></span>
                     </p>
-                    {stop.distanceFromPrevious !== 9999 && (
-                      <p className="text-sm font-medium text-gray-500 mb-3 bg-gray-50 inline-block px-3 py-1 rounded-full border border-gray-200">
-                        🚗 {stop.distanceFromPrevious.toFixed(1)} km {index === 0 ? "from your starting point" : "from previous stop"}
-                      </p>
-                    )}
-                    <p className="text-gray-600 leading-relaxed">{stop.description}</p>
                   </div>
-                ))}
+                )}
+
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8">
+                  <div className="relative border-l-4 border-indigo-500 pl-8 space-y-10 ml-4">
+                    {(() => {
+                      let visitCount = 0;
+                      return plannedTrip.map((stop, index) => {
+                        if (!stop.isLunch) visitCount++;
+                        return (
+                          <div key={`itinerary-${stop.id}-${index}`} className="relative">
+                            <div className={`absolute -left-[45px] top-1 ${stop.isLunch ? 'bg-orange-500' : 'bg-indigo-500'} text-white font-bold w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md`}>
+                              {stop.isLunch ? "🍱" : visitCount}
+                            </div>
+                            <h3 className={`text-xl font-bold ${stop.isLunch ? 'text-orange-700' : 'text-gray-900'}`}>{stop.name}</h3>
+                            <p className={`font-semibold mb-2 text-lg ${stop.isLunch ? 'text-orange-500' : 'text-indigo-600'}`}>
+                              {formatTime(stop.startTime)} - {formatTime(stop.endTime)}
+                            </p>
+                            {stop.distanceFromPrevious !== 9999 && !stop.isLunch && (
+                              <p className="text-sm font-medium text-gray-500 mb-3 bg-gray-50 inline-block px-3 py-1 rounded-full border border-gray-200">
+                                🚗 {stop.distanceFromPrevious.toFixed(1)} km {index === 0 ? "from your starting point" : "from previous stop"}
+                              </p>
+                            )}
+                            <p className="text-gray-600 leading-relaxed italic">{stop.description}</p>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
               </div>
+
+              {/* Map Column */}
+              {showMap && (
+                <div className="md:w-1/2">
+                  <div className="map-container shadow-2xl border-4 border-white">
+                    <MapContainer
+                      center={[plannedTrip[0].latitude, plannedTrip[0].longitude]}
+                      zoom={13}
+                      scrollWheelZoom={false}
+                      className="h-full w-full"
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+
+                      {(() => {
+                        let visitCount = 0;
+                        return plannedTrip
+                          .filter(stop => !stop.isLunch)
+                          .map((stop, idx) => {
+                            visitCount++;
+                          const markerLabel = visitCount;
+                          
+                          const customIcon = L.divIcon({
+                            html: `<div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white shadow-lg text-white font-bold bg-blue-600">
+                                    ${markerLabel}
+                                   </div>`,
+                            className: 'custom-div-icon',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                          });
+
+                          return (
+                            <Marker 
+                              key={`map-marker-${stop.id}-${idx}`} 
+                              position={[stop.latitude, stop.longitude]}
+                              icon={customIcon}
+                            >
+                              <Popup>
+                                <div className="font-bold">{stop.name}</div>
+                                <div className="text-sm text-gray-600">{formatTime(stop.startTime)}</div>
+                              </Popup>
+                            </Marker>
+                          );
+                        });
+                      })()}
+
+                      {routeGeometry && (
+                        <Polyline
+                          positions={routeGeometry}
+                          color="blue"
+                          weight={5}
+                          opacity={0.6}
+                        />
+                      )}
+
+                      <MapRefresher points={plannedTrip.map(s => [s.latitude, s.longitude])} />
+                    </MapContainer>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -248,11 +549,10 @@ function App() {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2 rounded-full font-semibold transition-all border ${
-                activeCategory === cat
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-indigo-400 hover:text-indigo-500"
-              }`}
+              className={`px-5 py-2 rounded-full font-semibold transition-all border active:scale-95 active:shadow-inner ${activeCategory === cat
+                ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                : "bg-white text-gray-600 border-gray-200 hover:border-indigo-400 hover:text-indigo-500"
+                }`}
             >
               {cat}
             </button>
@@ -263,40 +563,51 @@ function App() {
           {places
             .filter((place) => activeCategory === "All" || place.category === activeCategory)
             .map((place) => (
-            <div
-              key={place.id}
-              className="flex flex-col bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100"
-            >
-              {place.image_url ? (
-                <img
-                  src={place.image_url}
-                  alt={place.name}
-                  className="w-full h-48 object-cover border-b border-gray-100"
-                />
-              ) : (
-                <div className="w-full h-48 bg-gray-100 border-b border-gray-200 flex items-center justify-center text-gray-400">
-                  <span className="text-sm">No Image Available</span>
+              <div
+                key={place.id}
+                className="flex flex-col bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100"
+              >
+                {place.image_url ? (
+                  <img
+                    src={place.image_url}
+                    alt={place.name}
+                    className="w-full h-48 object-cover border-b border-gray-100"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-100 border-b border-gray-200 flex items-center justify-center text-gray-400">
+                    <span className="text-sm">No Image Available</span>
+                  </div>
+                )}
+
+                <div className="p-5 flex flex-col flex-grow">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    {place.name}
+                  </h2>
+
+                  <p className="text-gray-500 mt-2 mb-4">
+                    {place.description}
+                  </p>
+
+                  <button
+                    onClick={() => addToPlan(place)}
+                    disabled={selectedPlaces.some((p) => p.id === place.id)}
+                    className={`mt-auto w-full font-semibold px-4 py-2 rounded-lg transition-all shadow-sm ${selectedPlaces.some((p) => p.id === place.id)
+                      ? "bg-green-100 text-green-700 border-2 border-green-500 shadow-inner cursor-default flex items-center justify-center gap-2"
+                      : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 active:scale-[0.97] active:shadow-inner"
+                      }`}
+                  >
+                    {selectedPlaces.some((p) => p.id === place.id) ? (
+                      <>
+                        <span>Added</span>
+                        <span className="text-lg">✅</span>
+                      </>
+                    ) : (
+                      "Add to Plan"
+                    )}
+                  </button>
                 </div>
-              )}
-
-              <div className="p-5 flex flex-col flex-grow">
-                <h2 className="text-xl font-bold text-gray-800">
-                  {place.name}
-                </h2>
-
-                <p className="text-gray-500 mt-2 mb-4">
-                  {place.description}
-                </p>
-
-                <button
-                  onClick={() => addToPlan(place)}
-                  className="mt-auto w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
-                >
-                  Add to Plan
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     </div>
