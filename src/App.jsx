@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 import { useEffect, useState, useMemo } from "react";
+import SignUpForm from "./components/SignUpForm";
+import LoginForm from "./components/LoginForm";
+import { signOutUser } from "./auth";
+import { savePlannedTrip } from "./tripService";
+import SavedTripsView from "./components/SavedTripsView";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 
@@ -51,6 +56,14 @@ function App() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [routeGeometry, setRouteGeometry] = useState(null);
+  const [mapFocus, setMapFocus] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState("signup"); // "signup" or "login"
+  const [session, setSession] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("home"); // "home" or "saved"
+  const [currentTripId, setCurrentTripId] = useState(null);
 
   // Helper to zoom map to fit all markers
   function MapRefresher({ points }) {
@@ -64,16 +77,66 @@ function App() {
     return null;
   }
 
+  function MapFocuser({ focus }) {
+    const map = useMap();
+    useEffect(() => {
+      if (focus) {
+        map.flyTo([focus.lat, focus.lon], 16, {
+          duration: 1.5
+        });
+      }
+    }, [focus, map]);
+    return null;
+  }
+
   const categories = ["All", "Nature", "Recreation", "Religious", "Heritage"];
 
   function addToPlan(place) {
     if (!selectedPlaces.find((p) => p.id === place.id)) {
       setSelectedPlaces([...selectedPlaces, place]);
+      setCurrentTripId(null); // Fresh plan mode
     }
   }
 
   function removeFromPlan(placeId) {
     setSelectedPlaces(selectedPlaces.filter((p) => p.id !== placeId));
+    setCurrentTripId(null); // Fresh plan mode
+  }
+
+  function handleFocusLocation(lat, lon) {
+    if (!showMap) setShowMap(true);
+    // Use an object with a timestamp to ensure clicking the same location triggers the effect
+    setMapFocus({ lat, lon, ts: Date.now() });
+  }
+
+  async function handleSaveTrip() {
+    if (!session) {
+      setAuthMode("login");
+      setShowAuth(true);
+      return;
+    }
+
+    if (currentTripId) {
+      alert("This trip is already saved in your history!");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data, error } = await savePlannedTrip(session.user.id, plannedTrip);
+
+      if (error) {
+        alert("Error saving trip: " + error);
+      } else {
+        setCurrentTripId(data.id);
+        alert("Plan saved successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An unexpected error occurred.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function generatePlan() {
@@ -255,11 +318,22 @@ function App() {
   }
 
   useEffect(() => {
-    console.log("App Loaded"); // 👈 ADD THIS
+    // 1. Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // 2. Listen for auth changes (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) setShowAuth(false); // Close modal on success
+    });
+
+    console.log("App Loaded");
     checkConnection();
-    fetchPlaces(); // ✅ updated
+    fetchPlaces();
 
-
+    return () => subscription.unsubscribe();
   }, []);
 
   async function checkConnection() {
@@ -291,9 +365,120 @@ function App() {
 
   return (
     <div>
-      <h1>{status}</h1>
+      {/* Header with Auth Button */}
+      <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
+        <h1 className="text-xl font-bold text-gray-800">🌍 Day Visit Planner | {status}</h1>
 
-      <div className="p-6">
+        <div className="flex items-center gap-4">
+          {session ? (
+            <>
+              <span className="text-sm font-semibold text-indigo-600 hidden md:block">
+                Hi, {session.user.user_metadata?.username || session.user.email} 👋
+              </span>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-100 flex items-center gap-2"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthMode("signup");
+                setShowAuth(true);
+              }}
+              className="bg-indigo-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+            >
+              Sign Up 🚀
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white border-b flex justify-center sticky top-0 z-[40]">
+        <button
+          onClick={() => setActiveTab("home")}
+          className={`px-8 py-3 font-bold transition-all border-b-4 ${activeTab === "home" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          📍 Plan a Trip
+        </button>
+        <button
+          onClick={() => setActiveTab("saved")}
+          className={`px-8 py-3 font-bold transition-all border-b-4 ${activeTab === "saved" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          🎒 My Saved Trips
+        </button>
+      </div>
+
+      {/* Sign Up Modal Overlay */}
+      {showAuth && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setShowAuth(false)}
+        >
+          <div
+            className="relative w-full max-w-md cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowAuth(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-all font-bold text-xl z-50 p-2"
+              title="Close"
+            >
+              ✕
+            </button>
+            {authMode === "signup" ? (
+              <SignUpForm onSwitchToLogin={() => setAuthMode("login")} />
+            ) : (
+              <LoginForm onSwitchToSignUp={() => setAuthMode("signup")} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1001] flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                🚪
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Ready to leave?</h2>
+              <p className="text-gray-500 mb-8">Are you sure you want to log out from your account?</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+                >
+                  Stay
+                </button>
+                <button
+                  onClick={async () => {
+                    await signOutUser();
+                    setShowLogoutConfirm(false);
+                  }}
+                  className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all active:scale-95 shadow-md"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "home" ? (
+        <div className="p-6">
         <h2 className="text-2xl font-bold mb-4">My Current Plan ({selectedPlaces.length} places)</h2>
         {selectedPlaces.length > 0 && (
           <div className="mb-8 p-4 bg-gray-100 rounded-xl">
@@ -402,6 +587,7 @@ function App() {
 
             <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
               <button
+                id="generate-btn"
                 onClick={generatePlan}
                 disabled={isGenerating}
                 className={`
@@ -427,14 +613,26 @@ function App() {
 
         {plannedTrip.length > 0 && (
           <div className="mb-12">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
               <h2 className="text-3xl font-extrabold text-gray-900">Your Optimized Itinerary</h2>
-              <button
-                onClick={() => setShowMap(!showMap)}
-                className="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
-              >
-                {showMap ? "Hide Map 🗺️" : "Show Map 🗺️"}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSaveTrip}
+                  disabled={isSaving || currentTripId}
+                  className={`
+                    ${(isSaving || currentTripId) ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"} 
+                    text-white font-bold px-6 py-2 rounded-lg shadow-md transition-all active:scale-95 flex items-center gap-2
+                  `}
+                >
+                  {currentTripId ? "Saved ✓" : (isSaving ? "Saving..." : "Save Plan 💾")}
+                </button>
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                >
+                  {showMap ? "Hide Map 🗺️" : "Show Map 🗺️"}
+                </button>
+              </div>
             </div>
 
             <div className={`flex flex-col ${showMap ? 'md:flex-row' : ''} gap-8`}>
@@ -458,7 +656,11 @@ function App() {
                         if (!stop.isLunch) visitCount++;
                         return (
                           <div key={`itinerary-${stop.id}-${index}`} className="relative">
-                            <div className={`absolute -left-[45px] top-1 ${stop.isLunch ? 'bg-orange-500' : 'bg-indigo-500'} text-white font-bold w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md`}>
+                            <div
+                              onClick={() => handleFocusLocation(stop.latitude, stop.longitude)}
+                              className={`absolute -left-[45px] top-1 cursor-pointer hover:scale-110 active:scale-95 transition-all ${stop.isLunch ? 'bg-orange-500' : 'bg-indigo-500'} text-white font-bold w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md`}
+                              title="Click to zoom in on map"
+                            >
                               {stop.isLunch ? "🍱" : visitCount}
                             </div>
                             <h3 className={`text-xl font-bold ${stop.isLunch ? 'text-orange-700' : 'text-gray-900'}`}>{stop.name}</h3>
@@ -500,30 +702,30 @@ function App() {
                           .filter(stop => !stop.isLunch)
                           .map((stop, idx) => {
                             visitCount++;
-                          const markerLabel = visitCount;
-                          
-                          const customIcon = L.divIcon({
-                            html: `<div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white shadow-lg text-white font-bold bg-blue-600">
+                            const markerLabel = visitCount;
+
+                            const customIcon = L.divIcon({
+                              html: `<div class="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white shadow-lg text-white font-bold bg-blue-600">
                                     ${markerLabel}
                                    </div>`,
-                            className: 'custom-div-icon',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 16]
-                          });
+                              className: 'custom-div-icon',
+                              iconSize: [32, 32],
+                              iconAnchor: [16, 16]
+                            });
 
-                          return (
-                            <Marker 
-                              key={`map-marker-${stop.id}-${idx}`} 
-                              position={[stop.latitude, stop.longitude]}
-                              icon={customIcon}
-                            >
-                              <Popup>
-                                <div className="font-bold">{stop.name}</div>
-                                <div className="text-sm text-gray-600">{formatTime(stop.startTime)}</div>
-                              </Popup>
-                            </Marker>
-                          );
-                        });
+                            return (
+                              <Marker
+                                key={`map-marker-${stop.id}-${idx}`}
+                                position={[stop.latitude, stop.longitude]}
+                                icon={customIcon}
+                              >
+                                <Popup>
+                                  <div className="font-bold">{stop.name}</div>
+                                  <div className="text-sm text-gray-600">{formatTime(stop.startTime)}</div>
+                                </Popup>
+                              </Marker>
+                            );
+                          });
                       })()}
 
                       {routeGeometry && (
@@ -536,6 +738,7 @@ function App() {
                       )}
 
                       <MapRefresher points={plannedTrip.map(s => [s.latitude, s.longitude])} />
+                      <MapFocuser focus={mapFocus} />
                     </MapContainer>
                   </div>
                 </div>
@@ -610,6 +813,17 @@ function App() {
             ))}
         </div>
       </div>
+    ) : (
+        <div className="p-6">
+          <SavedTripsView 
+            session={session} 
+            onOpenAuth={() => {
+              setAuthMode("login");
+              setShowAuth(true);
+            }} 
+          />
+        </div>
+      )}
     </div>
   );
 }
