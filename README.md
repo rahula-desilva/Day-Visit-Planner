@@ -10,8 +10,9 @@ This is a web application to plan one-day trips around Ratmalana.
 
 ## Tech Stack
 
-- Supabase(Database + Authentication + Backend )-React (Vite)
--Tailwind CS
+- Supabase(Database + Authentication + Backend )
+- React (Vite)
+- Tailwind CS
 - HTML/CSS/JavaScript
 
 
