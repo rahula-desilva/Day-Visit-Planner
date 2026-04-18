@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getUserTrips, deleteTrip } from "../tripService";
+import { getUserTrips, deleteTrip } from "../services/tripService";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 
@@ -27,7 +27,7 @@ function MapFocuser({ focus }) {
   return null;
 }
 
-export default function SavedTripsView({ session, onOpenAuth }) {
+export default function SavedTrips({ session, onOpenAuth }) {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);

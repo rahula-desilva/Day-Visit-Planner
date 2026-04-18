@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "../supabase";
 
 /**
  * SAVES A PLANNED TRIP TO THE DATABASE
@@ -55,6 +55,7 @@ export const getUserTrips = async (userId) => {
     .select(`
       *,
       trip_places (
+        id,
         order_number,
         places (*)
       )
