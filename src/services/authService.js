@@ -48,3 +48,21 @@ export const getSession = async () => {
   const { data: { session } } = await supabase.auth.getSession();
   return session;
 };
+
+/**
+ * GET USER ROLE
+ * Fetches the role (admin/user) for the given user ID.
+ */
+export const getUserRole = async (userId) => {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("Fetch Role Error:", error);
+    return null;
+  }
+  return data?.role;
+};

@@ -8,6 +8,7 @@ import AuthModals from "./components/AuthModals";
 // Pages
 import Home from "./pages/Home";
 import SavedTrips from "./pages/SavedTrips";
+import Admin from "./pages/Admin";
 
 /**
  * MAIN COMPONENT: App
@@ -19,6 +20,7 @@ export default function App() {
   // Use our professional Auth hook (The "Security Guard")
   const {
     session,
+    userRole,
     status,
     showAuth,
     setShowAuth,
@@ -54,6 +56,15 @@ export default function App() {
         >
           🎒 My Adventures
         </button>
+
+        {userRole === 'admin' && (
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`px-10 py-4 font-bold transition-all border-b-4 ${activeTab === "admin" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+          >
+            ⚙️ Admin
+          </button>
+        )}
       </nav>
 
       <main className="flex-grow">
@@ -63,6 +74,8 @@ export default function App() {
             setAuthMode={setAuthMode}
             setShowAuth={setShowAuth}
           />
+        ) : (activeTab === "admin" && userRole === 'admin') ? (
+          <Admin />
         ) : (
           <div className="p-6">
             <SavedTrips 
