@@ -39,7 +39,7 @@ export default function SavedTrips({ session, onOpenAuth }) {
   useEffect(() => {
     if (session) {
       fetchTrips();
-      
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((pos) => {
           setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
@@ -122,8 +122,8 @@ export default function SavedTrips({ session, onOpenAuth }) {
     return (
       <div className="space-y-6 animate-fadeIn">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-          <button 
-            onClick={() => { setSelectedTrip(null); setRouteGeometry(null); }} 
+          <button
+            onClick={() => { setSelectedTrip(null); setRouteGeometry(null); }}
             className="flex items-center gap-2 text-primary font-bold hover:opacity-70 transition-all"
           >
             <span className="material-symbols-outlined">arrow_back</span> Back to History
@@ -133,23 +133,23 @@ export default function SavedTrips({ session, onOpenAuth }) {
               Trip on {new Date(selectedTrip.date).toLocaleDateString()}
             </h2>
             <button
-               onClick={(e) => handleDelete(e, selectedTrip.id)}
-               className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
-               title="Delete this trip"
+              onClick={(e) => handleDelete(e, selectedTrip.id)}
+              className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm"
+              title="Delete this trip"
             >
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-               </svg>
+              </svg>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-280px)] min-h-[500px]">
-          <div className="bg-white rounded-2xl shadow-xl overflow-y-auto p-6 border border-gray-100">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[calc(100vh-280px)] lg:min-h-[500px]">
+          <div className="bg-white rounded-2xl shadow-xl overflow-y-auto p-6 border border-gray-100 max-h-[45vh] lg:max-h-none">
             <div className="relative border-l-4 border-primary pl-8 space-y-10 ml-4 py-4">
               {sortedPlaces.map((tp, idx) => (
                 <div key={tp.id} className="relative">
-                  <div 
+                  <div
                     onClick={() => setMapFocus({ lat: tp.places.latitude, lon: tp.places.longitude, ts: Date.now() })}
                     className="absolute -left-[45px] top-1 bg-primary text-white font-bold w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md cursor-pointer hover:scale-110 active:scale-95 transition-all"
                     title="Click to zoom in on map"
@@ -163,7 +163,7 @@ export default function SavedTrips({ session, onOpenAuth }) {
             </div>
           </div>
 
-          <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white relative h-full">
+          <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white relative h-[350px] lg:h-full">
             <MapContainer
               center={[sortedPlaces[0].places.latitude, sortedPlaces[0].places.longitude]}
               zoom={13}
@@ -171,8 +171,8 @@ export default function SavedTrips({ session, onOpenAuth }) {
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {sortedPlaces.map((tp) => (
-                <Marker 
-                  key={tp.id} 
+                <Marker
+                  key={tp.id}
                   position={[tp.places.latitude, tp.places.longitude]}
                   icon={L.divIcon({
                     html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#005ab7;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);color:white;font-weight:bold;">${tp.order_number}</div>`,
@@ -181,7 +181,7 @@ export default function SavedTrips({ session, onOpenAuth }) {
                 />
               ))}
               {userLocation && (
-                <Marker 
+                <Marker
                   position={[userLocation.lat, userLocation.lon]}
                   icon={L.divIcon({
                     html: `<div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);color:white;font-size:14px;">📍</div>`,
@@ -218,8 +218,8 @@ export default function SavedTrips({ session, onOpenAuth }) {
           <div className="text-6xl mb-6">🏜️</div>
           <h3 className="text-2xl font-bold text-gray-800 mb-4">No Saved Trips Yet</h3>
           <p className="text-gray-500 mb-8 max-w-md mx-auto">Generate a trip and click "Save Plan" to see your history here.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all shadow-lg"
           >
             Start Planning
@@ -228,8 +228,8 @@ export default function SavedTrips({ session, onOpenAuth }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {trips.map((trip) => (
-            <div 
-              key={trip.id} 
+            <div
+              key={trip.id}
               className="group bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 flex flex-col hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer relative"
               onClick={() => handleViewDetails(trip)}
             >
@@ -243,9 +243,9 @@ export default function SavedTrips({ session, onOpenAuth }) {
                     {trip.trip_places?.length || 0} Stops
                   </span>
                   <button
-                     onClick={(e) => handleDelete(e, trip.id)}
-                     className="bg-red-500/0 hover:bg-red-500 text-white p-1.5 rounded-lg transition-all"
-                     title="Delete trip"
+                    onClick={(e) => handleDelete(e, trip.id)}
+                    className="bg-red-500/0 hover:bg-red-500 text-white p-1.5 rounded-lg transition-all"
+                    title="Delete trip"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />

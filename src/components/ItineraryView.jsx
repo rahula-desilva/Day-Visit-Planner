@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
-import { formatTime } from "../utils/helpers";
+import { formatOpeningHours, formatTime } from "../utils/helpers";
 
 /**
  * MAP HELPERS (Internal to this file)
@@ -170,7 +170,7 @@ export default function ItineraryView({
                             <div className="p-1">
                               <h4 className="font-bold text-base m-0">{stop.name}</h4>
                               <p className="text-primary font-bold text-xs m-0 mb-1">{formatTime(stop.startTime)} - {formatTime(stop.endTime)}</p>
-                              <p className="text-[10px] text-gray-500 m-0 italic flex items-center"><span className="material-symbols-outlined text-[10px] mr-1">schedule</span> {stop.opening_hours || "09:00 AM - 05:00 PM"}</p>
+                              <p className="text-[10px] text-gray-500 m-0 italic flex items-center"><span className="material-symbols-outlined text-[10px] mr-1">schedule</span> {formatOpeningHours(stop.opening_hours)}</p>
                               {stop.travel_tips && (
                                 <p className="text-[11px] bg-amber-50 text-amber-800 p-1 rounded mt-1 border border-amber-100">
                                   <span className="material-symbols-outlined align-middle text-[11px] mr-1">lightbulb</span> {stop.travel_tips}

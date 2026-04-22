@@ -1,3 +1,5 @@
+import { formatOpeningHours } from "../utils/helpers";
+
 /**
  * COMPONENT: PlaceCard
  * Displays a single tourist spot with its image, description, and an action button.
@@ -33,7 +35,7 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
         {/* Opening Hours - Fixed position */}
         <div className="h-8 mb-4 border-b border-gray-50">
           <span className="inline-flex items-center text-primary text-[11px] font-bold uppercase tracking-wider">
-            <span className="material-symbols-outlined align-middle mr-1 text-sm">schedule</span> Opening Time: {place.opening_hours || "09:00 AM - 05:00 PM"}
+            <span className="material-symbols-outlined align-middle mr-1 text-sm">schedule</span> Opening Time: {formatOpeningHours(place.opening_hours)}
           </span>
         </div>
 

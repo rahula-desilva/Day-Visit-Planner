@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchPlaces } from "../services/placeService";
+import { formatOpeningHours } from "../utils/helpers";
 
 /**
  * PAGE: LandingPage
@@ -58,7 +59,7 @@ export default function LandingPage({
           <div className="relative z-10 h-full max-w-7xl mx-auto px-12 flex flex-col justify-center">
             <div className="max-w-2xl">
               <h1 className="font-headline text-white text-6xl font-extrabold tracking-tight mb-4 leading-tight">
-                Explore the City <br/>in a Day
+                Explore the Ratmalana City <br/>in a Day
               </h1>
               <p className="text-white/90 text-xl font-medium mb-8">
                 The ultimate one-day trip planner for Sri Lanka. Discover curated gems from Colombo to Galle.
@@ -205,7 +206,7 @@ export default function LandingPage({
                   
                   <div className="h-8 mb-4 border-b border-gray-50">
                     <span className="inline-flex items-center text-primary text-[11px] font-bold uppercase tracking-wider">
-                      <span className="material-symbols-outlined align-middle mr-1 text-sm">schedule</span> Opening Time: {place.opening_hours || "09:00 AM - 05:00 PM"}
+                      <span className="material-symbols-outlined align-middle mr-1 text-sm">schedule</span> Opening Time: {formatOpeningHours(place.opening_hours)}
                     </span>
                   </div>
 

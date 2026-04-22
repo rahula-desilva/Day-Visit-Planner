@@ -36,3 +36,12 @@ export function formatTime(time) {
   const formattedHour = hours % 12 === 0 ? 12 : hours % 12;
   return `${formattedHour}:${minutes} ${period}`;
 }
+
+/**
+ * Normalizes opening hours display text in UI.
+ */
+export function formatOpeningHours(openingHours) {
+  if (!openingHours) return "09:00 AM - 05:00 PM";
+  if (String(openingHours).toLowerCase().includes("24")) return "Open 24 Hours";
+  return openingHours;
+}
