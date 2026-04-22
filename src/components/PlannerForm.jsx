@@ -26,7 +26,7 @@ export default function PlannerForm({
               <input
                 type="text"
                 placeholder="Current Location (GPS)"
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all"
                 value={customLocation}
                 onChange={(e) => {
                   setCustomLocation(e.target.value);
@@ -41,7 +41,7 @@ export default function PlannerForm({
                     .map(city => (
                       <div
                         key={city}
-                        className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-gray-700 transition-colors border-b last:border-0 border-gray-50"
+                        className="px-4 py-2 hover:bg-primary/10 cursor-pointer text-gray-700 transition-colors border-b last:border-0 border-gray-50"
                         onClick={() => {
                           setCustomLocation(city);
                           setShowSuggestions(false);
@@ -53,7 +53,7 @@ export default function PlannerForm({
                 </div>
               )}
 
-              <span className="absolute left-3 top-2.5 text-gray-400">📍</span>
+              <span className="absolute left-3 top-2.5 material-symbols-outlined text-gray-400 text-lg">location_on</span>
             </div>
           </div>
 
@@ -61,7 +61,7 @@ export default function PlannerForm({
             <label className="text-sm font-semibold text-gray-600">Start Time</label>
             <div className="relative">
               <select
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all appearance-none bg-white"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               >
@@ -78,7 +78,7 @@ export default function PlannerForm({
                   );
                 })}
               </select>
-              <span className="absolute left-3 top-2.5 text-gray-400">⏰</span>
+              <span className="absolute left-3 top-2.5 material-symbols-outlined text-gray-400 text-lg">schedule</span>
             </div>
           </div>
         </div>
@@ -95,9 +95,7 @@ export default function PlannerForm({
               <div className={`w-12 h-6 rounded-full transition-colors ${includeLunch ? 'bg-orange-500' : 'bg-gray-300'}`}></div>
               <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${includeLunch ? 'translate-x-6' : ''}`}></div>
             </div>
-            <span className="font-semibold text-gray-700 group-hover:text-orange-600 transition-colors">
-              Include Lunch Break (1 hr) 🍱
-            </span>
+              Include Lunch Break (1 hr) <span className="material-symbols-outlined align-sub ml-1 text-orange-500">restaurant</span>
           </label>
 
           <p className="text-xs text-gray-500 italic">
@@ -112,20 +110,22 @@ export default function PlannerForm({
           onClick={onGenerate}
           disabled={isGenerating}
           className={`
-            relative font-bold px-8 py-3 rounded-xl transition-all shadow-lg min-w-[200px]
+            relative font-bold px-8 py-3 rounded-xl transition-all shadow-md min-w-[200px]
             ${isGenerating
-              ? "bg-indigo-400 cursor-wait scale-95"
-              : "bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.95] active:shadow-inner"}
+              ? "bg-[#005ab7]/50 cursor-wait scale-95"
+              : "bg-[#005ab7] hover:opacity-90 active:scale-95"}
             text-white flex items-center justify-center gap-2
           `}
         >
           {isGenerating ? (
             <>
-              <span className="animate-spin text-xl">🌀</span>
+              <span className="material-symbols-outlined animate-spin text-xl">autorenew</span>
               Generating...
             </>
           ) : (
-            "Generate Plan 🚀"
+            <>
+              Generate Plan <span className="material-symbols-outlined">rocket_launch</span>
+            </>
           )}
         </button>
       </div>

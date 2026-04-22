@@ -13,7 +13,7 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
           <img
             src={place.image_url}
             alt={place.name}
-            className="w-full h-48 object-cover border-b border-gray-100 group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-64 object-cover border-b border-gray-100 group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-48 bg-gray-100 border-b border-gray-200 flex items-center justify-center text-gray-400">
@@ -24,7 +24,7 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
 
       <div className="p-5 flex flex-col flex-grow text-left">
         {/* Title Area - Fixed height for horizontal alignment */}
-        <div className="h-14 mb-2 flex items-center">
+        <div className="min-h-[56px] mb-2 flex items-center pr-2">
           <h2 className="text-xl font-bold text-gray-900 leading-tight font-sans">
             {place.name}
           </h2>
@@ -32,8 +32,8 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
 
         {/* Opening Hours - Fixed position */}
         <div className="h-8 mb-4 border-b border-gray-50">
-          <span className="inline-flex items-center text-indigo-600 text-[11px] font-bold uppercase tracking-wider">
-            🕒 Opening Time: {place.opening_hours || "09:00 AM - 05:00 PM"}
+          <span className="inline-flex items-center text-primary text-[11px] font-bold uppercase tracking-wider">
+            <span className="material-symbols-outlined align-middle mr-1 text-sm">schedule</span> Opening Time: {place.opening_hours || "09:00 AM - 05:00 PM"}
           </span>
         </div>
 
@@ -53,7 +53,7 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
                 className={`tip-button flex items-center gap-3 text-xs font-black transition-all ${isOpen ? 'text-amber-700' : 'text-gray-500 hover:text-amber-600'}`}
               >
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${isOpen ? 'bg-amber-100 border-amber-600 shadow-lg scale-110' : 'bg-gray-100 border-gray-300 shadow-sm'}`}>
-                  <span className="text-xl">💡</span>
+                  <span className="material-symbols-outlined text-xl">lightbulb</span>
                 </div>
                 {isOpen ? "HIDE EXPERT TIP" : "SEE EXPERT TIP"}
               </button>
@@ -76,13 +76,13 @@ export default function PlaceCard({ place, isSelected, onAdd, onRemove, isOpen, 
           className={`mt-auto w-full font-bold text-sm px-4 py-3 rounded-xl transition-all shadow-md active:scale-95 ${
             isSelected
               ? "bg-red-50 text-red-600 border-2 border-red-200 hover:bg-red-100 shadow-red-100"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+              : "bg-[#005ab7] text-white hover:opacity-90"
           }`}
         >
           {isSelected ? (
-            <span className="flex items-center justify-center gap-2">Remove from Plan ✕</span>
+            <span className="flex items-center justify-center gap-2">Remove from Plan <span className="material-symbols-outlined">close</span></span>
           ) : (
-            <span className="flex items-center justify-center gap-2">Add to Plan 📍</span>
+            <span className="flex items-center justify-center gap-2">Add to Plan <span className="material-symbols-outlined">add_location</span></span>
           )}
         </button>
       </div>

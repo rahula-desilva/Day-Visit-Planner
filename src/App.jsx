@@ -3,19 +3,26 @@ import useAuth from "./hooks/useAuth";
 
 // Components
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 import AuthModals from "./components/AuthModals";
 
 // Pages
 import Home from "./pages/Home";
 import SavedTrips from "./pages/SavedTrips";
 import Admin from "./pages/Admin";
+import LandingPage from "./pages/LandingPage";
 
 /**
  * MAIN COMPONENT: App
  * Acts as the lightweight router and layout wrapper for the application.
  */
 export default function App() {
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState("landing");
+
+  // --- Shared Planner State ---
+  const [customLocation, setCustomLocation] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
+  const [includeLunch, setIncludeLunch] = useState(true);
   
   // Use our professional Auth hook (The "Security Guard")
   const {
@@ -35,44 +42,38 @@ export default function App() {
       <Header 
         status={status} 
         session={session} 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userRole={userRole}
         onLogout={() => setShowLogoutConfirm(true)} 
         onLogin={() => {
           setAuthMode("signup");
           setShowAuth(true);
         }}
       />
-      
-      {/* Navigation Switchboard */}
-      <nav className="bg-white border-b flex justify-center sticky top-0 z-[40] shadow-sm">
-        <button
-          onClick={() => setActiveTab("home")}
-          className={`px-10 py-4 font-bold transition-all border-b-4 ${activeTab === "home" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-        >
-          📍 Plan a Trip
-        </button>
-        <button
-          onClick={() => setActiveTab("saved")}
-          className={`px-10 py-4 font-bold transition-all border-b-4 ${activeTab === "saved" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-        >
-          🎒 My Adventures
-        </button>
 
-        {userRole === 'admin' && (
-          <button
-            onClick={() => setActiveTab("admin")}
-            className={`px-10 py-4 font-bold transition-all border-b-4 ${activeTab === "admin" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
-          >
-            ⚙️ Admin
-          </button>
-        )}
-      </nav>
-
-      <main className="flex-grow">
-        {activeTab === "home" ? (
+      <main className="flex-grow pt-20">
+        {activeTab === "landing" ? (
+          <LandingPage 
+            onExplore={() => setActiveTab("home")}
+            customLocation={customLocation}
+            setCustomLocation={setCustomLocation}
+            startTime={startTime}
+            setStartTime={setStartTime}
+            includeLunch={includeLunch}
+            setIncludeLunch={setIncludeLunch}
+          />
+        ) : activeTab === "home" ? (
           <Home 
             session={session}
             setAuthMode={setAuthMode}
             setShowAuth={setShowAuth}
+            customLocation={customLocation}
+            setCustomLocation={setCustomLocation}
+            startTime={startTime}
+            setStartTime={setStartTime}
+            includeLunch={includeLunch}
+            setIncludeLunch={setIncludeLunch}
           />
         ) : (activeTab === "admin" && userRole === 'admin') ? (
           <Admin />
@@ -85,6 +86,8 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <Footer />
 
       <AuthModals 
         showAuth={showAuth} setShowAuth={setShowAuth}

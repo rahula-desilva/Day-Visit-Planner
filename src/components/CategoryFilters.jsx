@@ -4,15 +4,16 @@
  */
 export default function CategoryFilters({ categories, activeCategory, setActiveCategory }) {
   return (
-    <div className="flex flex-wrap gap-3 mb-8">
+    <div className="flex flex-wrap items-center gap-3 mb-8">
       {categories.map((cat) => (
         <button
           key={cat}
           onClick={() => setActiveCategory(cat)}
-          className={`px-5 py-2 rounded-full font-semibold transition-all border active:scale-95 active:shadow-inner ${activeCategory === cat
-            ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-            : "bg-white text-gray-600 border-gray-200 hover:border-indigo-400 hover:text-indigo-500"
-            }`}
+          className={`inline-flex items-center min-h-[42px] px-6 py-2.5 rounded-full font-medium leading-none whitespace-nowrap transition-all active:scale-95 border ${
+            activeCategory === cat
+              ? "bg-[#005ab7] text-white shadow-lg border-transparent"
+              : "bg-gray-100 text-gray-600 border-transparent hover:opacity-90"
+          }`}
         >
           {cat}
         </button>

@@ -13,7 +13,17 @@ import PlaceCard from "../components/PlaceCard";
  * PAGE: Home
  * The main landing page: now manages its own trip planning logic and state.
  */
-export default function Home({ session, setAuthMode, setShowAuth }) {
+export default function Home({ 
+  session, 
+  setAuthMode, 
+  setShowAuth,
+  customLocation,
+  setCustomLocation,
+  startTime,
+  setStartTime,
+  includeLunch,
+  setIncludeLunch
+}) {
   // --- Planning Data State ---
   const [places, setPlaces] = useState([]);
   const [selectedPlaces, setSelectedPlaces] = useState([]);
@@ -22,9 +32,6 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
   
   // --- Planning Settings State ---
   const [activeCategory, setActiveCategory] = useState("All");
-  const [includeLunch, setIncludeLunch] = useState(true);
-  const [startTime, setStartTime] = useState("09:00");
-  const [customLocation, setCustomLocation] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // --- Interaction State ---
@@ -34,6 +41,7 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
   const [showMap, setShowMap] = useState(false);
   const [routeGeometry, setRouteGeometry] = useState(null);
   const [mapFocus, setMapFocus] = useState(null);
+  const [startPoint, setStartPoint] = useState(null);
 
   const categories = ["All", "Nature", "Recreation", "Religious", "Heritage"];
   const [openTipId, setOpenTipId] = useState(null);
@@ -87,7 +95,7 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
     const { data, error } = await savePlannedTrip(session.user.id, plannedTrip);
     if (!error) {
       setCurrentTripId(data.id);
-      alert("Plan saved successfully! 🎒");
+      alert("Plan saved successfully!");
     } else {
       alert("Error saving trip: " + error);
     }
@@ -99,25 +107,42 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
     setIsGenerating(true);
 
     try {
-      let startLat, startLon;
+      let startLat = 6.9271; // Default to Colombo
+      let startLon = 79.8612;
+      
       // 1. Get Starting Coordinates
-      if (customLocation.trim()) {
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customLocation)}&limit=1`);
-        const geoData = await geoRes.json();
-        if (geoData.length > 0) {
-          startLat = parseFloat(geoData[0].lat);
-          startLon = parseFloat(geoData[0].lon);
-        } else {
-          alert("Location not found.");
-          setIsGenerating(false);
-          return;
+      if (customLocation && customLocation.trim()) {
+        try {
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customLocation)}&limit=1`);
+          const geoData = await geoRes.json();
+          if (geoData.length > 0) {
+            startLat = parseFloat(geoData[0].lat);
+            startLon = parseFloat(geoData[0].lon);
+          } else {
+            alert("Location not found. Using Colombo as default.");
+          }
+        } catch (e) {
+          console.warn("Geocoding failed", e);
         }
       } else {
-        const position = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-        startLat = position.coords.latitude;
-        startLon = position.coords.longitude;
+        try {
+          const position = await new Promise((res, rej) => {
+            navigator.geolocation.getCurrentPosition(res, rej, { 
+              enableHighAccuracy: true, 
+              timeout: 15000, 
+              maximumAge: 10000 
+            });
+          });
+          startLat = position.coords.latitude;
+          startLon = position.coords.longitude;
+        } catch (err) {
+          console.warn("Geolocation denied or timed out. Using Colombo as fallback.");
+          alert("Could not automatically determine your location. Using default starting point.");
+        }
       }
 
+      // Store start point for map marker
+      setStartPoint({ lat: startLat, lon: startLon });
       // 2. Sort Route (Nearest Neighbor)
       let available = [...selectedPlaces];
       let sorted = [];
@@ -141,7 +166,10 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
       const data = await response.json();
 
       if (data.code === "Ok") {
-        const [h, m] = startTime.split(":").map(Number);
+        let h = 9, m = 0;
+        if (startTime && startTime.includes(":")) {
+          [h, m] = startTime.split(":").map(Number);
+        }
         let curTime = h + m/60;
         const initialTime = curTime;
         const legs = data.routes[0].legs;
@@ -154,7 +182,7 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
           
           if (includeLunch && !lunchAdded && curTime + driveHrs >= 12.5) {
              finalItinerary.push({ 
-               id: 'lunch', name: "🍱 Lunch Break", startTime: curTime + driveHrs, endTime: curTime + driveHrs + 1, isLunch: true, description: "Time to eat!" 
+               id: 'lunch', name: "Lunch Break", startTime: curTime + driveHrs, endTime: curTime + driveHrs + 1, isLunch: true, description: "Time to eat!" 
              });
              curTime += 1;
              lunchAdded = true;
@@ -187,7 +215,7 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
         <>
           <div className="flex flex-wrap gap-2 mb-6">
             {selectedPlaces.map((place) => (
-              <span key={`plan-${place.id}`} className="bg-indigo-600 text-white px-3 py-1 rounded-full flex items-center gap-2 shadow-sm text-sm">
+              <span key={`plan-${place.id}`} className="bg-[#005ab7] text-white px-3 py-1 rounded-full flex items-center gap-2 shadow-sm text-sm">
                 {place.name}
                 <button
                   onClick={() => removeFromPlan(place.id)}
@@ -222,6 +250,7 @@ export default function Home({ session, setAuthMode, setShowAuth }) {
           setShowMap={setShowMap}
           routeGeometry={routeGeometry}
           mapFocus={mapFocus}
+          startPoint={startPoint}
           onFocusLocation={handleFocusLocation}
           onSaveTrip={handleSaveTrip}
           isSaving={isSaving}

@@ -48,7 +48,33 @@ export const updatePlace = async (placeId, placeDetails) => {
 
   return { data, error };
 };
+
 export const deletePlace = async (placeId) => {
   const { error } = await supabase.from("places").delete().eq("id", placeId);
   return { error };
+};
+
+/**
+ * UPLOADS AN IMAGE FILE TO SUPABASE STORAGE
+ */
+export const uploadPlaceImage = async (file) => {
+  // Create a unique filename
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('places-images')
+    .upload(filePath, file);
+
+  if (error) {
+    return { error };
+  }
+
+  // Get the public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('places-images')
+    .getPublicUrl(filePath);
+
+  return { publicUrl, error: null };
 };

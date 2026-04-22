@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { fetchPlaces, addPlace, updatePlace, deletePlace } from "../services/placeService";
+import { fetchPlaces, addPlace, updatePlace, deletePlace, uploadPlaceImage } from "../services/placeService";
 
 /**
  * PAGE: Admin
- * Restored version: Complete form with images in list.
+ * Includes Image Uploading functionality.
  */
 export default function Admin() {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -74,14 +75,26 @@ export default function Admin() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const { publicUrl, error } = await uploadPlaceImage(file);
+    setUploading(false);
+
+    if (error) {
+      alert("Upload failed: " + error.message);
+    } else {
+      setFormData({ ...formData, image_url: publicUrl });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Construct the opening hours string from the steppers
     const finalHours = `${hStart.toString().padStart(2, '0')}:${mStart.toString().padStart(2, '0')} ${pStart} - ${hEnd.toString().padStart(2, '0')}:${mEnd.toString().padStart(2, '0')} ${pEnd}`;
     
-    // CLEAN THE DATA: Send ONLY the fields we want to edit. 
-    // This prevents errors from read-only fields like 'created_at'.
     const cleanData = {
       name: formData.name,
       category: formData.category,
@@ -99,28 +112,31 @@ export default function Admin() {
 
     if (error) {
        console.error("ADMIN DATABASE ERROR:", error);
-       alert("DATABASE REJECTED: " + error.message + "\n\n(Hint: Check your Supabase RLS policies for the Admin role)");
+       alert("DATABASE REJECTED: " + error.message);
     } else {
-       console.log("SUCCESSFUL UPDATE:", data);
-       alert(editingId ? "Changes saved to database! ✏️" : "New spot added to database! 🚀");
+       alert(editingId ? "Changes saved! ✏️" : "New spot added! 🚀");
        resetForm();
        loadPlaces();
     }
   };
 
-  if (loading) return <div className="p-20 text-center font-bold text-indigo-600">Loading Dashboard...</div>;
+  if (loading) return <div className="p-20 text-center font-bold text-primary">Loading Dashboard...</div>;
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-6 pb-20">
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 border-l-4 border-indigo-600 pl-4">Admin Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-900 border-l-4 border-primary pl-4">Admin Dashboard</h2>
         <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Master Mode</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Full Form */}
         <div className="lg:col-span-1 bg-white rounded-2xl p-6 shadow-xl border border-gray-50 flex flex-col gap-4 sticky top-24">
-          <h3 className="font-bold text-gray-800 border-b pb-2">{editingId ? "✏️ Edit Spot" : "➕ Add Spot"}</h3>
+          <h3 className="font-headline font-bold text-gray-900 border-b pb-4 flex items-center gap-2">
+            <span className={`material-symbols-outlined ${editingId ? 'text-amber-500' : 'text-primary'}`}>
+              {editingId ? 'edit_square' : 'add_circle'}
+            </span>
+            {editingId ? "Edit Spot" : "Add New Spot"}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <input placeholder="Spot Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold" />
             
@@ -140,32 +156,32 @@ export default function Admin() {
               <div className="flex items-center justify-between gap-1">
                  <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border">
                     <div className="flex flex-col items-center">
-                      <button type="button" onClick={() => stepTime('h', 1)} className="text-[10px] text-indigo-400">▲</button>
+                      <button type="button" onClick={() => stepTime('h', 1)} className="text-[10px] text-primary">▲</button>
                       <span className="text-xs font-bold">{hStart.toString().padStart(2, '0')}</span>
-                      <button type="button" onClick={() => stepTime('h', -1)} className="text-[10px] text-indigo-400">▼</button>
+                      <button type="button" onClick={() => stepTime('h', -1)} className="text-[10px] text-primary">▼</button>
                     </div>
                     <span className="text-xs font-bold">:</span>
                     <div className="flex flex-col items-center">
-                      <button type="button" onClick={() => stepTime('m', 15)} className="text-[10px] text-indigo-400">▲</button>
+                      <button type="button" onClick={() => stepTime('m', 15)} className="text-[10px] text-primary">▲</button>
                       <span className="text-xs font-bold">{mStart.toString().padStart(2, '0')}</span>
-                      <button type="button" onClick={() => stepTime('m', -15)} className="text-[10px] text-indigo-400">▼</button>
+                      <button type="button" onClick={() => stepTime('m', -15)} className="text-[10px] text-primary">▼</button>
                     </div>
-                    <button type="button" onClick={() => setPStart(pStart === 'AM' ? 'PM' : 'AM')} className="bg-indigo-600 text-white text-[9px] font-black px-1 py-1 rounded">{pStart}</button>
+                    <button type="button" onClick={() => setPStart(pStart === 'AM' ? 'PM' : 'AM')} className="bg-primary text-white text-[9px] font-black px-1 py-1 rounded">{pStart}</button>
                  </div>
                  <span className="text-[10px] font-bold text-gray-300">to</span>
                  <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border">
                     <div className="flex flex-col items-center">
-                      <button type="button" onClick={() => stepTime('h', 1, true)} className="text-[10px] text-indigo-400">▲</button>
+                      <button type="button" onClick={() => stepTime('h', 1, true)} className="text-[10px] text-primary">▲</button>
                       <span className="text-xs font-bold">{hEnd.toString().padStart(2, '0')}</span>
-                      <button type="button" onClick={() => stepTime('h', -1, true)} className="text-[10px] text-indigo-400">▼</button>
+                      <button type="button" onClick={() => stepTime('h', -1, true)} className="text-[10px] text-primary">▼</button>
                     </div>
                     <span className="text-xs font-bold">:</span>
                     <div className="flex flex-col items-center">
-                      <button type="button" onClick={() => stepTime('m', 15, true)} className="text-[10px] text-indigo-400">▲</button>
+                      <button type="button" onClick={() => stepTime('m', 15, true)} className="text-[10px] text-primary">▲</button>
                       <span className="text-xs font-bold">{mEnd.toString().padStart(2, '0')}</span>
-                      <button type="button" onClick={() => stepTime('m', -15, true)} className="text-[10px] text-indigo-400">▼</button>
+                      <button type="button" onClick={() => stepTime('m', -15, true)} className="text-[10px] text-primary">▼</button>
                     </div>
-                    <button type="button" onClick={() => setPEnd(pEnd === 'AM' ? 'PM' : 'AM')} className="bg-indigo-600 text-white text-[9px] font-black px-1 py-1 rounded">{pEnd}</button>
+                    <button type="button" onClick={() => setPEnd(pEnd === 'AM' ? 'PM' : 'AM')} className="bg-primary text-white text-[9px] font-black px-1 py-1 rounded">{pEnd}</button>
                  </div>
               </div>
             </div>
@@ -181,35 +197,37 @@ export default function Admin() {
                </div>
             </div>
 
-            <input placeholder="Image URL" value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} className="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs" />
+            <div className="space-y-1">
+               <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Spot Image</label>
+               <input type="file" accept="image/*" onChange={handleFileUpload} className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-primary/10 file:text-primary" />
+               {uploading && <p className="text-[10px] text-primary font-bold">Uploading...</p>}
+               <input placeholder="Image URL" value={formData.image_url} onChange={(e) => setFormData({...formData, image_url: e.target.value})} className="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-xs" />
+               {formData.image_url && <img src={formData.image_url} className="w-full h-20 object-cover rounded-lg mt-2" alt="Preview" />}
+            </div>
             
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={resetForm} className="flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl text-xs active:scale-95 transition-all">Clear</button>
-              <button type="submit" className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl text-xs hover:bg-indigo-700 shadow-md">
+              <button type="submit" className="flex-[2] py-3 bg-primary text-white font-bold rounded-xl text-xs hover:opacity-90 shadow-md">
                 {editingId ? "Update" : "Save"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* Inventory - Images Restored */}
         <div className="lg:col-span-3 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {places.map(place => (
-              <div key={place.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:border-indigo-300 transition-all">
+              <div key={place.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between hover:border-primary/40 transition-all">
                 <div className="flex items-center gap-4 min-w-0">
                   <img src={place.image_url} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0 bg-gray-50" />
                   <div className="min-w-0">
                     <h4 className="font-bold text-gray-900 text-sm truncate">{place.name}</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[9px] font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">{place.category}</span>
-                      <span className="text-[9px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">ID: {place.id}</span>
-                    </div>
+                    <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded-md">{place.category}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleEdit(place)} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">Edit</button>
-                  <button onClick={async () => { if(confirm("Are you sure you want to delete this place?")) { await deletePlace(place.id); loadPlaces(); } }} className="px-4 py-2 bg-gray-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">Del</button>
+                  <button onClick={() => handleEdit(place)} className="px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-primary hover:text-white text-[10px] font-black">Edit</button>
+                  <button onClick={async () => { if(confirm("Are you sure you want to delete this place?")) { await deletePlace(place.id); loadPlaces(); } }} className="px-4 py-2 bg-gray-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white text-[10px] font-black">Delete</button>
                 </div>
               </div>
             ))}

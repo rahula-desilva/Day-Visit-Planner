@@ -28,10 +28,10 @@ export default function AuthModals({
           >
             <button
               onClick={() => setShowAuth(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-all font-bold text-xl z-50 p-2"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-all z-50 p-2 flex items-center justify-center bg-gray-50 rounded-full hover:bg-gray-100"
               title="Close"
             >
-              ✕
+              <span className="material-symbols-outlined text-xl">close</span>
             </button>
             {authMode === "signup" ? (
               <SignUpForm onSwitchToLogin={() => setAuthMode("login")} />

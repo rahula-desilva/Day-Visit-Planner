@@ -68,7 +68,7 @@ export default function SignUpForm({ onSwitchToLogin, onSuccess }) {
           <input
             type="text"
             required
-            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all"
             placeholder="johndoe"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -80,7 +80,7 @@ export default function SignUpForm({ onSwitchToLogin, onSuccess }) {
           <input
             type="email"
             required
-            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all"
             placeholder="name@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -93,7 +93,7 @@ export default function SignUpForm({ onSwitchToLogin, onSuccess }) {
             <input
               type={showPassword ? "text" : "password"}
               required
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all pr-10"
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all pr-10"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -134,7 +134,7 @@ export default function SignUpForm({ onSwitchToLogin, onSuccess }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:bg-indigo-400 shadow-md flex items-center justify-center gap-2"
+          className="w-full bg-[#005ab7] text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
@@ -148,7 +148,7 @@ export default function SignUpForm({ onSwitchToLogin, onSuccess }) {
       <div className="mt-6 text-center pt-4 border-t border-gray-100">
         <button
           onClick={onSwitchToLogin}
-          className="text-indigo-600 text-sm font-semibold hover:underline"
+          className="text-[#005ab7] text-sm font-semibold hover:underline"
         >
           Already have an account? Sign In
         </button>
