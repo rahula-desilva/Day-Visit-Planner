@@ -1,0 +1,75 @@
+DAYVISIT PLANNER - FILE STRUCTURE
+===================================
+
+ROOT FILES
+----------
+index.html
+package.json
+vite.config.js
+tailwind.config.js
+postcss.config.js
+eslint.config.js
+README.md
+progress.txt
+project scope.txt
+
+SRC/
+---
+main.jsx              - App entry point
+App.jsx               - Main app component
+App.css               - App styles
+index.css             - Global styles
+supabase.js           - Supabase config
+
+SRC/COMPONENTS/
+---------------
+AuthModals.jsx        - Login/Signup modals
+CategoryFilters.jsx   - Category filter buttons
+Footer.jsx            - Footer component
+Header.jsx            - Header/navbar
+Hero.jsx              - Hero section
+ItineraryView.jsx     - Trip itinerary display
+LoginForm.jsx         - Login form
+PlaceCard.jsx         - Place display card
+PlannerForm.jsx       - Trip planner form
+SignUpForm.jsx        - Signup form
+code.html             - (misc)
+
+SRC/PAGES/
+----------
+Admin.jsx             - Admin dashboard
+Home.jsx              - Home page
+LandingPage.jsx       - Landing page
+SavedTrips.jsx        - Saved trips page
+
+SRC/SERVICES/
+-------------
+authService.js        - Auth API calls
+placeService.js       - Places API calls
+tripService.js        - Trips API calls
+
+SRC/HOOKS/
+----------
+useAuth.js            - Auth hook
+
+SRC/UTILS/
+----------
+helpers.js            - Helper functions
+
+SRC/ASSETS/
+-----------
+hero.png              - Hero image
+react.svg             - React logo
+
+PUBLIC/
+-------
+images/               - Public images
+
+DATABASE/
+---------
+Schema.sql            - Database schema
+seed.sql              - Seed data
+
+SCRIPTS/
+--------
+updateColors.js       - Color update script

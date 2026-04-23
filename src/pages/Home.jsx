@@ -4,10 +4,11 @@ import { savePlannedTrip } from "../services/tripService";
 import { getDistanceFromLatLonInKm } from "../utils/helpers";
 
 // Components
-import CategoryFilters from "../components/CategoryFilters";
-import PlannerForm from "../components/PlannerForm";
-import ItineraryView from "../components/ItineraryView";
-import PlaceCard from "../components/PlaceCard";
+import CategoryFilters from "../components/common/CategoryFilters";
+import PlannerForm from "../components/planner/PlannerForm";
+import ItineraryView from "../components/planner/ItineraryView";
+import PlaceCard from "../components/common/PlaceCard";
+
 
 /**
  * PAGE: Home
@@ -102,6 +103,7 @@ export default function Home({
     setIsSaving(false);
   }
 
+  
   async function generatePlan() {
     if (selectedPlaces.length === 0) return;
     setIsGenerating(true);
@@ -195,9 +197,33 @@ export default function Home({
         }
 
         setPlannedTrip(finalItinerary);
-        setTripSummary({ distance: (data.routes[0].distance/1000).toFixed(1), drivingHours: (data.routes[0].duration/3600).toFixed(1), totalHours: (curTime - initialTime).toFixed(1) });
+        const tripDistance = (data.routes[0].distance/1000).toFixed(1);
+        const drivingHours = (data.routes[0].duration/3600).toFixed(1);
+        const totalHours = (curTime - initialTime).toFixed(1);
+        setTripSummary({ distance: tripDistance, drivingHours: drivingHours, totalHours: totalHours });
         setRouteGeometry(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
-        setShowMap(true);
+        
+        // Validate trip limits for one-day trip
+        if (parseFloat(tripDistance) > 50|| parseFloat(totalHours) > 8) {
+          const distanceMsg = parseFloat(tripDistance) > 50 ? `Distance (${tripDistance}km) exceeds 50km` : '';
+          const hoursMsg = parseFloat(totalHours) > 8 ? `Duration (${totalHours}hrs) exceeds 8 hours` : '';
+          const issues = [distanceMsg, hoursMsg].filter(Boolean).join(' and ');
+          
+          if (!confirm(`⚠️ One-day trip planner!\n\n${issues}.\n\nThis may be too much for a comfortable one-day trip.\n\n👉 Press OK to adjust your plan (remove places)\n👉 Press Cancel to continue anyway`)) {
+            // User wants to continue anyway (Cancel button)
+            setShowMap(true);
+          } else {
+            // User wants to remove locations (OK button)
+            setPlannedTrip([]);
+            setTripSummary(null);
+            setRouteGeometry(null);
+            setShowMap(false);
+            alert("Please remove some locations from your plan and try again.");
+            return;
+          }
+        } else {
+          setShowMap(true);
+        }
       }
     } catch (e) {
       console.error(e);

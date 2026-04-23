@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { fetchPlaces } from "../services/placeService";
 import { formatOpeningHours } from "../utils/helpers";
-
+import Hero from "../components/common/Hero";
 /**
  * PAGE: LandingPage
  * A professional, high-end landing page based on Google Stitch UI design.
@@ -46,27 +46,8 @@ export default function LandingPage({
   return (
     <div className="bg-white font-body text-gray-900 antialiased">
       <main>
-        {/* Hero Section */}
-        <section className="relative h-[870px] w-full overflow-hidden">
-          <div className="absolute inset-0 z-0 text-white">
-            <img 
-              className="w-full h-full object-cover" 
-              alt="Traditional Sri Lankan stilt fisherman" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8uwd_bkpSSdtVGYqVVExiN6Ng_NatsCht74a0TeeB4cl_whYecfE_O5fsu0aPK6LhPGxAqaeBqkr9W6MetwmnTyUXZWkgWPKHbOeLF5nzGN8NMDPVRXB5gY6Hb_mZN-d9LOBYyR-RZh-AzS1la3pDLpOjCHXH9l-PDadItwm_P-23aV7tLPk6tGaDmtmlq_pgnCEjerRudcjo64D0PACNIXJgoM_IwR6jHarFe2W5Es2JxGIkKoKlN45Zs6o9qeE_4832fuGBmkyB"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent"></div>
-          </div>
-          <div className="relative z-10 h-full max-w-7xl mx-auto px-12 flex flex-col justify-center">
-            <div className="max-w-2xl">
-              <h1 className="font-headline text-white text-6xl font-extrabold tracking-tight mb-4 leading-tight">
-                Explore the Ratmalana City <br/>in a Day
-              </h1>
-              <p className="text-white/90 text-xl font-medium mb-8">
-                The ultimate one-day trip planner for Sri Lanka. Discover curated gems from Colombo to Galle.
-              </p>
-            </div>
-          </div>
-        </section>
+        <Hero />
+    
 
         {/* 🧩 Planner Control Bar - Search & Filter Area */}
         <section className="relative z-20 -mt-20 px-4 md:px-12 max-w-7xl mx-auto">
@@ -190,6 +171,7 @@ export default function LandingPage({
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
                     src={place.image_url || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5962?auto=format&fit=crop&q=80"} 
                     alt={place.name}
+                    onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1544620347-c4fd4a3d5962?auto=format&fit=crop&q=80"; }}
                   />
                   <div className="absolute top-6 right-6 bg-white shadow-lg p-3 rounded-full hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-red-500" style={{ fontVariationSettings: "'FILL' 1" }}>favorite</span>

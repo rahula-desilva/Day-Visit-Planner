@@ -2,9 +2,10 @@ import { useState } from "react";
 import useAuth from "./hooks/useAuth";
 
 // Components
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import AuthModals from "./components/AuthModals";
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
+// import AuthModals from "./components/AuthModals";
+import AuthModals from "./components/auth/AuthModals";
 
 // Pages
 import Home from "./pages/Home";

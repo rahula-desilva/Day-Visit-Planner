@@ -165,7 +165,7 @@ export default function SavedTrips({ session, onOpenAuth }) {
 
           <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white relative h-[350px] lg:h-full">
             <MapContainer
-              center={[sortedPlaces[0].places.latitude, sortedPlaces[0].places.longitude]}
+              center={sortedPlaces[0]?.places?.latitude && sortedPlaces[0]?.places?.longitude ? [sortedPlaces[0].places.latitude, sortedPlaces[0].places.longitude] : [6.9271, 79.8612]}
               zoom={13}
               className="h-full w-full"
             >
