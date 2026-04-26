@@ -15,17 +15,15 @@ import LandingPage from "./pages/LandingPage";
 
 /**
  * MAIN COMPONENT: App
- * Acts as the lightweight router and layout wrapper for the application.
  */
 export default function App() {
   const [activeTab, setActiveTab] = useState("landing");
 
-  // --- Shared Planner State ---
   const [customLocation, setCustomLocation] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [includeLunch, setIncludeLunch] = useState(true);
-  
-  // Use our professional Auth hook (The "Security Guard")
+
+  // Use professional Auth hook 
   const {
     session,
     userRole,
@@ -40,13 +38,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header 
-        status={status} 
-        session={session} 
+      <Header
+        status={status}
+        session={session}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         userRole={userRole}
-        onLogout={() => setShowLogoutConfirm(true)} 
+        onLogout={() => setShowLogoutConfirm(true)}
         onLogin={() => {
           setAuthMode("signup");
           setShowAuth(true);
@@ -55,7 +53,7 @@ export default function App() {
 
       <main className="flex-grow pt-20">
         {activeTab === "landing" ? (
-          <LandingPage 
+          <LandingPage
             onExplore={() => setActiveTab("home")}
             customLocation={customLocation}
             setCustomLocation={setCustomLocation}
@@ -65,7 +63,7 @@ export default function App() {
             setIncludeLunch={setIncludeLunch}
           />
         ) : activeTab === "home" ? (
-          <Home 
+          <Home
             session={session}
             setAuthMode={setAuthMode}
             setShowAuth={setShowAuth}
@@ -80,9 +78,9 @@ export default function App() {
           <Admin />
         ) : (
           <div className="p-6">
-            <SavedTrips 
-              session={session} 
-              onOpenAuth={() => { setAuthMode("login"); setShowAuth(true); }} 
+            <SavedTrips
+              session={session}
+              onOpenAuth={() => { setAuthMode("login"); setShowAuth(true); }}
             />
           </div>
         )}
@@ -90,7 +88,7 @@ export default function App() {
 
       <Footer />
 
-      <AuthModals 
+      <AuthModals
         showAuth={showAuth} setShowAuth={setShowAuth}
         authMode={authMode} setAuthMode={setAuthMode}
         showLogoutConfirm={showLogoutConfirm} setShowLogoutConfirm={setShowLogoutConfirm}

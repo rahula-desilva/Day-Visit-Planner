@@ -71,7 +71,7 @@ export const uploadPlaceImage = async (file) => {
     return { error };
   }
 
-  // Get the public URL
+  // public URL
   const { data: { publicUrl } } = supabase.storage
     .from('places-images')
     .getPublicUrl(filePath);
