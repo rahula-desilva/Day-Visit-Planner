@@ -1,5 +1,5 @@
 /**
- * HELPER FUNCTIONS FOR CALCULATIONS AND FORMATTING
+ *  CALCULATIONS AND FORMATTING
  */
 
 /**
@@ -26,7 +26,7 @@ export function deg2rad(deg) {
 }
 
 /**
- * Converts float time (e.g., 14.5) to a string (e.g., "2:30 PM")
+ * Converts float time  to a string 
  */
 export function formatTime(time) {
   const hours = Math.floor(time);
@@ -38,7 +38,7 @@ export function formatTime(time) {
 }
 
 /**
- * Normalizes opening hours display text in UI.
+ * Normalizes opening hours display text 
  */
 export function formatOpeningHours(openingHours) {
   if (!openingHours) return "09:00 AM - 05:00 PM";

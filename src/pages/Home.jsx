@@ -12,7 +12,7 @@ import PlaceCard from "../components/common/PlaceCard";
 
 /**
  * PAGE: Home
- * The main landing page: now manages its own trip planning logic and state.
+ * The main landing page:  state.
  */
 export default function Home({ 
   session, 
@@ -65,7 +65,7 @@ export default function Home({
     return () => document.removeEventListener('click', handleGlobalClick);
   }, []);
 
-  // --- Functions ---
+ 
   function addToPlan(place) {
     if (!selectedPlaces.find((p) => p.id === place.id)) {
       setSelectedPlaces([...selectedPlaces, place]);

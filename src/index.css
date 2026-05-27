@@ -1,10 +1,9 @@
-
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @import "leaflet/dist/leaflet.css";
 
-/* Primary button — plain CSS to avoid IDE @apply warnings */
+/* Primary button */
 .btn-primary {
   background-color: #005ab7;
   color: #ffffff;
@@ -17,13 +16,17 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: all 0.2s;
   cursor: pointer;
   border: none;
 }
-.btn-primary:hover { opacity: 0.9; }
-.btn-primary:active { transform: scale(0.95); }
+.btn-primary:hover {
+  opacity: 0.9;
+}
+.btn-primary:active {
+  transform: scale(0.95);
+}
 
 .glass-nav {
   background: rgba(255, 255, 255, 0.8);
@@ -31,7 +34,7 @@
 }
 
 .text-shadow-sm {
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -62,7 +65,7 @@
 }
 
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   vertical-align: middle;
 }
 

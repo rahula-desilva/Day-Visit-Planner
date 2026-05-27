@@ -3,7 +3,6 @@ import { fetchPlaces, addPlace, updatePlace, deletePlace, uploadPlaceImage } fro
 
 /**
  * PAGE: Admin
- * Includes Image Uploading functionality.
  */
 export default function Admin() {
   const [places, setPlaces] = useState([]);

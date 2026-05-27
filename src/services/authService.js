@@ -1,9 +1,6 @@
 import { supabase } from "../supabase";
 
-/**
- * SIGN UP
- * Creates a new user in Supabase Auth.
- * The 'username' is passed in the metadata so the database trigger can pick it up.
+/** SIGN UP
  */
 export const signUpUser = async (email, password, username) => {
   const { data, error } = await supabase.auth.signUp({

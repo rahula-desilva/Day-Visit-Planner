@@ -7,7 +7,7 @@ import { supabase } from "../supabase";
  */
 export const savePlannedTrip = async (userId, plannedTrip) => {
   try {
-    // Step 1: Create the main trip record
+    // main trip record
     const { data: tripData, error: tripError } = await supabase
       .from("trips")
       .insert([
@@ -21,8 +21,7 @@ export const savePlannedTrip = async (userId, plannedTrip) => {
 
     if (tripError) throw tripError;
 
-    // Step 2: Prepare the places list (Order them 1, 2, 3...)
-    // Note: We filter out 'lunch-break' because it's not a real place in your DB
+    // Order 
     const tripId = tripData.id;
     const placesToInsert = plannedTrip
       .filter(item => !item.isLunch)
@@ -32,7 +31,7 @@ export const savePlannedTrip = async (userId, plannedTrip) => {
         order_number: index + 1
       }));
 
-    // Step 3: Save all places at once (batch insert)
+    // Save all places at once 
     const { error: placesError } = await supabase
       .from("trip_places")
       .insert(placesToInsert);
