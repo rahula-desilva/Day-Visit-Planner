@@ -9,28 +9,27 @@ import PlannerForm from "../components/planner/PlannerForm";
 import ItineraryView from "../components/planner/ItineraryView";
 import PlaceCard from "../components/common/PlaceCard";
 
-
 /**
  * PAGE: Home
  * The main landing page:  state.
  */
-export default function Home({ 
-  session, 
-  setAuthMode, 
+export default function Home({
+  session,
+  setAuthMode,
   setShowAuth,
   customLocation,
   setCustomLocation,
   startTime,
   setStartTime,
   includeLunch,
-  setIncludeLunch
+  setIncludeLunch,
 }) {
   // --- Planning Data State ---
   const [places, setPlaces] = useState([]);
   const [selectedPlaces, setSelectedPlaces] = useState([]);
   const [plannedTrip, setPlannedTrip] = useState([]);
   const [tripSummary, setTripSummary] = useState(null);
-  
+
   // --- Planning Settings State ---
   const [activeCategory, setActiveCategory] = useState("All");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -57,15 +56,17 @@ export default function Home({
 
     // Listener to close tips when clicking elsewhere
     const handleGlobalClick = (e) => {
-      if (!e.target.closest('.place-card') && !e.target.closest('.tip-button')) {
+      if (
+        !e.target.closest(".place-card") &&
+        !e.target.closest(".tip-button")
+      ) {
         setOpenTipId(null);
       }
     };
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
+    document.addEventListener("click", handleGlobalClick);
+    return () => document.removeEventListener("click", handleGlobalClick);
   }, []);
 
- 
   function addToPlan(place) {
     if (!selectedPlaces.find((p) => p.id === place.id)) {
       setSelectedPlaces([...selectedPlaces, place]);
@@ -103,7 +104,6 @@ export default function Home({
     setIsSaving(false);
   }
 
-  
   async function generatePlan() {
     if (selectedPlaces.length === 0) return;
     setIsGenerating(true);
@@ -111,11 +111,15 @@ export default function Home({
     try {
       let startLat = 6.9271; // Default to Colombo
       let startLon = 79.8612;
-      
-      // 1. Get Starting Coordinates
+
+      // 1. Get Starting Coordinates ,API call to geocode custom location
       if (customLocation && customLocation.trim()) {
         try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customLocation)}&limit=1`);
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+              customLocation
+            )}&limit=1`
+          );
           const geoData = await geoRes.json();
           if (geoData.length > 0) {
             startLat = parseFloat(geoData[0].lat);
@@ -129,23 +133,27 @@ export default function Home({
       } else {
         try {
           const position = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, { 
-              enableHighAccuracy: true, 
-              timeout: 15000, 
-              maximumAge: 10000 
+            navigator.geolocation.getCurrentPosition(res, rej, {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 10000,
             });
           });
           startLat = position.coords.latitude;
           startLon = position.coords.longitude;
         } catch (err) {
-          console.warn("Geolocation denied or timed out. Using Colombo as fallback.");
-          alert("Could not automatically determine your location. Using default starting point.");
+          console.warn(
+            "Geolocation denied or timed out. Using Colombo as fallback."
+          );
+          alert(
+            "Could not automatically determine your location. Using default starting point."
+          );
         }
       }
 
       // Store start point for map marker
       setStartPoint({ lat: startLat, lon: startLon });
-      // 2. Sort Route (Nearest Neighbor)
+      // 2. Sort Route (Nearest Neighbor) Haversine distance calculation to sort places
       let available = [...selectedPlaces];
       let sorted = [];
       let currentLoc = { lat: startLat, lon: startLon };
@@ -154,25 +162,38 @@ export default function Home({
         let closestIdx = 0;
         let minDist = Infinity;
         available.forEach((p, i) => {
-          const d = getDistanceFromLatLonInKm(currentLoc.lat, currentLoc.lon, p.latitude, p.longitude);
-          if (d < minDist) { minDist = d; closestIdx = i; }
+          const d = getDistanceFromLatLonInKm(
+            currentLoc.lat,
+            currentLoc.lon,
+            p.latitude,
+            p.longitude
+          );
+          if (d < minDist) {
+            minDist = d;
+            closestIdx = i;
+          }
         });
         const next = available.splice(closestIdx, 1)[0];
         sorted.push(next);
         currentLoc = { lat: next.latitude, lon: next.longitude };
       }
 
-      // 3. Get Real Road Route (OSRM)
-      let coords = `${startLon},${startLat};` + sorted.map(p => `${p.longitude},${p.latitude}`).join(';');
-      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+      // 3. Get Real Road Route (OSRM) API call to get route geometry and durations
+      let coords =
+        `${startLon},${startLat};` +
+        sorted.map((p) => `${p.longitude},${p.latitude}`).join(";");
+      const response = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+      );
       const data = await response.json();
 
       if (data.code === "Ok") {
-        let h = 9, m = 0;
+        let h = 9,
+          m = 0;
         if (startTime && startTime.includes(":")) {
           [h, m] = startTime.split(":").map(Number);
         }
-        let curTime = h + m/60;
+        let curTime = h + m / 60;
         const initialTime = curTime;
         const legs = data.routes[0].legs;
         const finalItinerary = [];
@@ -181,35 +202,61 @@ export default function Home({
         for (let i = 0; i < sorted.length; i++) {
           const place = sorted[i];
           const driveHrs = legs[i].duration / 3600;
-          
+
           if (includeLunch && !lunchAdded && curTime + driveHrs >= 12.5) {
-             finalItinerary.push({ 
-               id: 'lunch', name: "Lunch Break", startTime: curTime + driveHrs, endTime: curTime + driveHrs + 1, isLunch: true, description: "Time to eat!" 
-             });
-             curTime += 1;
-             lunchAdded = true;
+            finalItinerary.push({
+              id: "lunch",
+              name: "Lunch Break",
+              startTime: curTime + driveHrs,
+              endTime: curTime + driveHrs + 1,
+              isLunch: true,
+              description: "Time to eat!",
+            });
+            curTime += 1;
+            lunchAdded = true;
           }
 
           const arrival = curTime + driveHrs;
           const duration = (place.visit_duration_minutes || 60) / 60;
-          finalItinerary.push({ ...place, startTime: arrival, endTime: arrival + duration, distanceFromPrevious: legs[i].distance/1000 });
+          finalItinerary.push({
+            ...place,
+            startTime: arrival,
+            endTime: arrival + duration,
+            distanceFromPrevious: legs[i].distance / 1000,
+          });
           curTime = arrival + duration;
         }
 
         setPlannedTrip(finalItinerary);
-        const tripDistance = (data.routes[0].distance/1000).toFixed(1);
-        const drivingHours = (data.routes[0].duration/3600).toFixed(1);
+        const tripDistance = (data.routes[0].distance / 1000).toFixed(1);
+        const drivingHours = (data.routes[0].duration / 3600).toFixed(1);
         const totalHours = (curTime - initialTime).toFixed(1);
-        setTripSummary({ distance: tripDistance, drivingHours: drivingHours, totalHours: totalHours });
-        setRouteGeometry(data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]));
-        
+        setTripSummary({
+          distance: tripDistance,
+          drivingHours: drivingHours,
+          totalHours: totalHours,
+        });
+        setRouteGeometry(
+          data.routes[0].geometry.coordinates.map((c) => [c[1], c[0]])
+        );
+
         // Validate trip limits for one-day trip
-        if (parseFloat(tripDistance) > 50|| parseFloat(totalHours) > 8) {
-          const distanceMsg = parseFloat(tripDistance) > 50 ? `Distance (${tripDistance}km) exceeds 50km` : '';
-          const hoursMsg = parseFloat(totalHours) > 8 ? `Duration (${totalHours}hrs) exceeds 8 hours` : '';
-          const issues = [distanceMsg, hoursMsg].filter(Boolean).join(' and ');
-          
-          if (!confirm(`⚠️ One-day trip planner!\n\n${issues}.\n\nThis may be too much for a comfortable one-day trip.\n\n👉 Press OK to adjust your plan (remove places)\n👉 Press Cancel to continue anyway`)) {
+        if (parseFloat(tripDistance) > 50 || parseFloat(totalHours) > 8) {
+          const distanceMsg =
+            parseFloat(tripDistance) > 50
+              ? `Distance (${tripDistance}km) exceeds 50km`
+              : "";
+          const hoursMsg =
+            parseFloat(totalHours) > 8
+              ? `Duration (${totalHours}hrs) exceeds 8 hours`
+              : "";
+          const issues = [distanceMsg, hoursMsg].filter(Boolean).join(" and ");
+
+          if (
+            !confirm(
+              `⚠️ One-day trip planner!\n\n${issues}.\n\nThis may be too much for a comfortable one-day trip.\n\n👉 Press OK to adjust your plan (remove places)\n👉 Press Cancel to continue anyway`
+            )
+          ) {
             // User wants to continue anyway (Cancel button)
             setShowMap(true);
           } else {
@@ -235,13 +282,18 @@ export default function Home({
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">My Trip Plan ({selectedPlaces.length} places)</h2>
-      
+      <h2 className="text-2xl font-bold mb-4">
+        My Trip Plan ({selectedPlaces.length} places)
+      </h2>
+
       {selectedPlaces.length > 0 && (
         <>
           <div className="flex flex-wrap gap-2 mb-6">
             {selectedPlaces.map((place) => (
-              <span key={`plan-${place.id}`} className="bg-[#005ab7] text-white px-3 py-1 rounded-full flex items-center gap-2 shadow-sm text-sm">
+              <span
+                key={`plan-${place.id}`}
+                className="bg-[#005ab7] text-white px-3 py-1 rounded-full flex items-center gap-2 shadow-sm text-sm"
+              >
                 {place.name}
                 <button
                   onClick={() => removeFromPlan(place.id)}
@@ -253,7 +305,7 @@ export default function Home({
             ))}
           </div>
 
-          <PlannerForm 
+          <PlannerForm
             customLocation={customLocation}
             setCustomLocation={setCustomLocation}
             startTime={startTime}
@@ -269,7 +321,7 @@ export default function Home({
       )}
 
       {plannedTrip.length > 0 && (
-        <ItineraryView 
+        <ItineraryView
           plannedTrip={plannedTrip}
           tripSummary={tripSummary}
           showMap={showMap}
@@ -285,9 +337,11 @@ export default function Home({
       )}
 
       <div className="mt-8">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">Available Places to Visit</h2>
-        
-        <CategoryFilters 
+        <h2 className="text-3xl font-bold mb-6 text-gray-800">
+          Available Places to Visit
+        </h2>
+
+        <CategoryFilters
           categories={categories}
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
@@ -295,7 +349,10 @@ export default function Home({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {places
-            .filter((place) => activeCategory === "All" || place.category === activeCategory)
+            .filter(
+              (place) =>
+                activeCategory === "All" || place.category === activeCategory
+            )
             .map((place) => (
               <PlaceCard
                 key={place.id}
@@ -304,7 +361,9 @@ export default function Home({
                 onAdd={addToPlan}
                 onRemove={() => removeFromPlan(place.id)}
                 isOpen={openTipId === place.id}
-                onToggleTip={() => setOpenTipId(openTipId === place.id ? null : place.id)}
+                onToggleTip={() =>
+                  setOpenTipId(openTipId === place.id ? null : place.id)
+                }
               />
             ))}
         </div>
